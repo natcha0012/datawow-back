@@ -1,78 +1,131 @@
-// import { Test, TestingModule } from '@nestjs/testing';
-// import { BoardService } from './board.service';
-// import { UnauthorizedException } from '@nestjs/common';
-// import { boards } from '../database';
-// import { CreateBoardDto } from './dto/create-board.dto';
-// import { UpdateBoardDto } from './dto/update-board.dto';
+import { BoardService } from './board.service';
+import { UnauthorizedException } from '@nestjs/common';
+import { boards } from '../database';
+import { User } from '../entitities';
+import { CreateBoardDto } from './dto/create-board.dto';
+import { BlogTag } from 'src/enums/tag.enum';
 
-// describe('BoardService', () => {
-//   let service: BoardService;
+describe('BoardService', () => {
+  let service: BoardService;
+  let testUser: User;
 
-//   beforeEach(async () => {
-//     boards.length = 0; // reset mock database
+  beforeEach(() => {
+    service = new BoardService();
+    testUser = { id: 1, username: 'testuser' };
+    boards.length = 0; // Reset the in-memory DB
+  });
 
-//     const module: TestingModule = await Test.createTestingModule({
-//       providers: [BoardService],
-//     }).compile();
+  describe('create', () => {
+    it('should create a board', () => {
+      const dto: CreateBoardDto = {
+        title: 'Test Title',
+        tag: BlogTag.Exercise,
+        content: 'Test content',
+      };
 
-//     service = module.get<BoardService>(BoardService);
-//   });
+      const result = service.create(dto, testUser);
 
-//   it('should create a board', () => {
-//     const dto: CreateBoardDto = {
-//       title: 'Test Detail',
-//     };
-//     const result = service.create(dto, 1);
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: 2,
+          title: dto.title,
+          tag: dto.tag,
+          content: dto.content,
+          userId: testUser.id,
+          author: testUser.username,
+          commentIds: [],
+        }),
+      );
 
-//     expect(result).toMatchObject({
-//       id: 2,
-//       title: 'Test Detail',
-//       userId: 1,
-//       commentId: [],
-//     });
-//     expect(boards.length).toBe(1);
-//   });
+      expect(boards.length).toBe(1);
+    });
+  });
 
-//   it('should return all boards', () => {
-//     service.create({ title: 'Detail' }, 1);
-//     const result = service.findAll();
-//     expect(result.length).toBe(1);
-//   });
+  describe('findAll', () => {
+    it('should return all boards', () => {
+      service.create(
+        { title: 'A', tag: BlogTag.Fashion, content: 'a' },
+        testUser,
+      );
+      service.create({ title: 'B', tag: BlogTag.Food, content: 'b' }, testUser);
+      const result = service.findAll();
 
-//   it('should find one board by id', () => {
-//     const created = service.create({ title: 'Detail' }, 1);
-//     const result = service.findOne(created.id);
-//     expect(result).toEqual(created);
-//   });
+      expect(result.length).toBe(2);
+    });
+  });
 
-//   it('should update a board if userId matches', () => {
-//     const created = service.create({ title: 'Detail' }, 1);
-//     const dto: UpdateBoardDto = { title: 'Updated Detail' };
+  describe('findOne', () => {
+    it('should return a single board', () => {
+      const created = service.create(
+        { title: 'One', tag: BlogTag.Exercise, content: 'one' },
+        testUser,
+      );
+      const result = service.findOne(created.id);
 
-//     const result = service.update(created.id, dto, 1);
-//     expect(result).toBe(`This action updates a #${created.id} board`);
-//     expect(boards[0].title).toBe('Updated Detail');
-//   });
+      expect(result.title).toBe('One');
+    });
+  });
 
-//   it('should throw UnauthorizedException if update userId does not match', () => {
-//     const created = service.create({ title: 'Detail' }, 1);
-//     const dto: UpdateBoardDto = { title: 'Hacked Detail' };
+  describe('update', () => {
+    it('should update the board if userId matches', () => {
+      const created = service.create(
+        { title: 'Old', tag: BlogTag.Health, content: 'old' },
+        testUser,
+      );
+      const updated = service.update(
+        created.id,
+        {
+          title: 'New',
+          tag: BlogTag.Health,
+          content: 'new',
+        },
+        testUser.id,
+      );
 
-//     expect(() => service.update(created.id, dto, 2)).toThrow(
-//       UnauthorizedException,
-//     );
-//   });
+      expect(updated).toBe(`This action updates a #${created.id} board`);
+      expect(boards[0].title).toBe('New');
+    });
 
-//   it('should remove a board if userId matches', () => {
-//     const created = service.create({ title: 'Detail' }, 1);
-//     const result = service.remove(created.id, 1);
+    it('should throw UnauthorizedException if userId does not match', () => {
+      const created = service.create(
+        { title: 'Secure', tag: BlogTag.Health, content: 'secure' },
+        testUser,
+      );
+      expect(() =>
+        service.update(
+          created.id,
+          {
+            title: 'Hacked',
+            tag: BlogTag.Health,
+            content: 'hacked',
+          },
+          999,
+        ),
+      ).toThrow(UnauthorizedException);
+    });
+  });
 
-//     expect(result).toBe(`This action removes a #${created.id} board`);
-//     expect(boards.length).toBe(0);
-//   });
+  describe('remove', () => {
+    it('should remove the board if userId matches', () => {
+      const created = service.create(
+        { title: 'Delete Me', tag: BlogTag.Health, content: 'bye' },
+        testUser,
+      );
+      const result = service.remove(created.id, testUser.id);
 
-//   it('should throw UnauthorizedException if remove userId does not match', () => {
-//     const created = service.create({ title: 'Detail' }, 1);
-//     expect(() => service.remove(created.id, 2)).toThrow(UnauthorizedException);
-//   });
-// });
+      expect(result).toBe(`This action removes a #${created.id} board`);
+      expect(boards.length).toBe(0);
+    });
+
+    it('should throw UnauthorizedException if userId does not match', () => {
+      const created = service.create(
+        { title: 'Stay', tag: BlogTag.Health, content: 'still here' },
+        testUser,
+      );
+
+      expect(() => service.remove(created.id, 999)).toThrow(
+        UnauthorizedException,
+      );
+    });
+  });
+});
