@@ -1,6 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { CreateBoardDto } from './dto/create-board.dto';
-import { UpdateBoardDto } from './dto/update-board.dto';
 import { boards } from '../database';
 import { Board, User } from '../entitities';
 
@@ -29,13 +28,15 @@ export class BoardService {
     return boards.find((b) => b.id === id);
   }
 
-  update(id: number, updateBoardDto: UpdateBoardDto, userId: number) {
+  update(id: number, updateBoardDto: CreateBoardDto, userId: number) {
     const board = boards.find((b) => b.id === id);
 
     if (userId !== board.userId) {
       throw new UnauthorizedException();
     }
     board.title = updateBoardDto.title;
+    board.tag = updateBoardDto.tag;
+    board.content = updateBoardDto.content;
     return `This action updates a #${id} board`;
   }
 

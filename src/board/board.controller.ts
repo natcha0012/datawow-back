@@ -3,14 +3,13 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   UseGuards,
+  Put,
 } from '@nestjs/common';
 import { BoardService } from './board.service';
 import { CreateBoardDto } from './dto/create-board.dto';
-import { UpdateBoardDto } from './dto/update-board.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { UserData } from 'src/decorator/user.decorator';
 import { User } from 'src/entitities';
@@ -35,10 +34,11 @@ export class BoardController {
     return this.boardService.findOne(+id);
   }
 
-  @Patch(':id')
+  @UseGuards(AuthGuard)
+  @Put(':id')
   update(
     @Param('id') id: string,
-    @Body() updateBoardDto: UpdateBoardDto,
+    @Body() updateBoardDto: CreateBoardDto,
     @UserData() user: User,
   ) {
     return this.boardService.update(+id, updateBoardDto, user.id);
