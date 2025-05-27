@@ -44,6 +44,7 @@ export class BoardController {
     return this.boardService.update(+id, updateBoardDto, user.id);
   }
 
+  @UseGuards(AuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @UserData() user: User) {
     return this.boardService.remove(+id, user.id);
